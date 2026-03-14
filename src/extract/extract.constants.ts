@@ -1,0 +1,1 @@
+export const PAGE_HTTP_CLIENT = 'PAGE_HTTP_CLIENT';
