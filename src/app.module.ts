@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ExtractModule } from './extract/extract.module';
 import { McpModule } from './mcp/mcp.module';
+import { SearchAndExtractModule } from './search-and-extract/search-and-extract.module';
 import { SearchModule } from './search/search.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { SearchModule } from './search/search.module';
     }),
     ExtractModule,
     McpModule,
+    SearchAndExtractModule,
     SearchModule,
   ],
   controllers: [AppController],
