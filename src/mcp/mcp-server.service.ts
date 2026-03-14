@@ -8,6 +8,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { Request, Response } from 'express';
 
+import { ExtractMcpTool } from './extract-mcp.tool';
 import { SearchMcpTool } from './search-mcp-tool';
 
 @Injectable()
@@ -21,10 +22,14 @@ export class McpServerService implements OnModuleInit, OnModuleDestroy {
     sessionIdGenerator: undefined,
   });
 
-  constructor(private readonly searchMcpTool: SearchMcpTool) {}
+  constructor(
+    private readonly searchMcpTool: SearchMcpTool,
+    private readonly extractMcpTool: ExtractMcpTool,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     this.searchMcpTool.register(this.server);
+    this.extractMcpTool.register(this.server);
     await this.server.connect(this.transport);
     this.logger.log('MCP server initialized');
   }

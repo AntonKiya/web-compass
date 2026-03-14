@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ExtractModule } from './extract/extract.module';
 import { McpModule } from './mcp/mcp.module';
 import { SearchModule } from './search/search.module';
 
@@ -11,6 +12,7 @@ import { SearchModule } from './search/search.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ExtractModule,
     McpModule,
     SearchModule,
   ],
