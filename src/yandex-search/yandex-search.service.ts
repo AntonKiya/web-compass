@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { SERPAPI_HTTP_CLIENT } from '../common/constants/serpapi.constants';
@@ -45,14 +40,15 @@ export class YandexSearchService implements SearchProvider {
   }
 
   async search(input: YandexSearchQueryDto): Promise<SearchResultDto[]> {
-    const apiKey = this.configService.get<string>('SERPAPI_KEY');
+    const validatedInput = input;
 
-    if (!apiKey) {
-      this.logger.error('SERPAPI_KEY is not configured');
-      throw new InternalServerErrorException('SERPAPI_KEY is not configured');
-    }
+    this.logger.log(
+      `Searching Yandex: query="${validatedInput.query}" topK=${validatedInput.topK} region=${validatedInput.region ?? 'russia'}`,
+    );
 
-    const requestUrl = this.buildRequestUrl(input, apiKey);
+    const apiKey = this.configService.getOrThrow<string>('SERPAPI_KEY');
+
+    const requestUrl = this.buildRequestUrl(validatedInput, apiKey);
 
     try {
       const payload = await this.httpClient.getJson<SerpApiSearchResponse>(
@@ -61,12 +57,21 @@ export class YandexSearchService implements SearchProvider {
 
       if (payload.error) {
         this.logger.error(
-          `SerpAPI returned an error for query "${input.query}": ${payload.error}`,
+          `Yandex SerpAPI error: query="${validatedInput.query}" error="${payload.error}"`,
         );
         throw new SearchProviderException();
       }
 
-      return this.mapResults(payload.organic_results ?? [], input.topK);
+      const results = this.mapResults(
+        payload.organic_results ?? [],
+        validatedInput.topK,
+      );
+
+      this.logger.log(
+        `Yandex search completed: query="${validatedInput.query}" returned ${results.length} results`,
+      );
+
+      return results;
     } catch (error: unknown) {
       if (error instanceof SearchProviderException) {
         throw error;
@@ -75,7 +80,7 @@ export class YandexSearchService implements SearchProvider {
       const message =
         error instanceof Error ? error.message : 'Unknown SerpAPI error';
       this.logger.error(
-        `SerpAPI request failed for query "${input.query}": ${message}`,
+        `Yandex SerpAPI request failed: query="${validatedInput.query}" cause="${message}"`,
       );
 
       throw new SearchProviderException();

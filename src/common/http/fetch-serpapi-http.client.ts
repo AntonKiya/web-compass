@@ -1,16 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { SerpApiHttpClient } from './serpapi-http-client.interface';
 
 @Injectable()
 export class FetchSerpApiHttpClient implements SerpApiHttpClient {
+  private readonly logger = new Logger(FetchSerpApiHttpClient.name);
   private readonly requestTimeoutMs: number;
   private readonly userAgent: string;
 
   constructor(private readonly configService: ConfigService) {
     this.requestTimeoutMs = Number(
-      this.configService.getOrThrow<string>('PAGE_FETCH_TIMEOUT_MS'),
+      this.configService.getOrThrow<string>('SERPAPI_TIMEOUT_MS'),
     );
     this.userAgent = this.configService.getOrThrow<string>('APP_USER_AGENT');
   }
@@ -26,10 +27,12 @@ export class FetchSerpApiHttpClient implements SerpApiHttpClient {
     });
 
     if (!response.ok) {
-      const body = await response.text();
+      this.logger.warn(
+        `SerpAPI responded with ${response.status} for url="${url}"`,
+      );
 
       throw new Error(
-        `SerpAPI request failed with status ${response.status}: ${body || 'empty response body'}`,
+        `SerpAPI request failed: HTTP ${response.status} ${response.statusText || 'unknown status'}`,
       );
     }
 

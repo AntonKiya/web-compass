@@ -16,6 +16,6 @@ export class YandexSearchAndExtractController {
   async handle(
     @Body() body: YandexSearchAndExtractQueryDto,
   ): Promise<SearchAndExtractResponseDto> {
-    return this.searchAndExtractPipeline.run(body);
+    return this.searchAndExtractPipeline.run({ ...body });
   }
 }

@@ -34,6 +34,9 @@ export class McpServerService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    this.logger.log(
+      'Registering MCP tools: search_yandex, search_google, extract, search_and_extract_yandex, search_and_extract_google',
+    );
     this.yandexSearchMcpTool.register(this.server);
     this.extractMcpTool.register(this.server);
     this.googleSearchAndExtractMcpTool.register(this.server);
@@ -44,6 +47,7 @@ export class McpServerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.logger.log('MCP server shutting down');
     await this.server.close();
   }
 

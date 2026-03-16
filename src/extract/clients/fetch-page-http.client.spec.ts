@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { FetchPageHttpClient } from './fetch-page-http.client';
@@ -43,5 +44,37 @@ describe('FetchPageHttpClient', () => {
       'User-Agent': 'test-agent/1.0',
     });
     expect(requestInit?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('logs a warning and throws an informative error for non-ok page responses', async () => {
+    const loggerWarnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+    } as unknown as Response);
+    const configService = {
+      getOrThrow: jest.fn((key: string) => {
+        if (key === 'APP_USER_AGENT') {
+          return 'test-agent/1.0';
+        }
+
+        if (key === 'PAGE_FETCH_TIMEOUT_MS') {
+          return '1500';
+        }
+
+        throw new Error(`Unexpected config key: ${key}`);
+      }),
+    } as unknown as ConfigService;
+    const client = new FetchPageHttpClient(configService);
+
+    await expect(client.fetchHtml('https://example.com/page')).rejects.toThrow(
+      'Failed to fetch "https://example.com/page": HTTP 404 Not Found',
+    );
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      'Page fetch failed: HTTP 404 url="https://example.com/page"',
+    );
   });
 });

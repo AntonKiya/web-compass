@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import {
   SEARCH_PROVIDER,
@@ -10,6 +10,8 @@ import { ExtractService } from '../../extract/extract.service';
 
 @Injectable()
 export class SearchAndExtractPipeline {
+  private readonly logger = new Logger(SearchAndExtractPipeline.name);
+
   constructor(
     @Inject(SEARCH_PROVIDER)
     private readonly searchProvider: SearchProvider,
@@ -19,15 +21,23 @@ export class SearchAndExtractPipeline {
   async run(input: {
     query: string;
     topK: number;
-    region?: 'russia' | 'cis';
+    [key: string]: unknown;
   }): Promise<SearchAndExtractResponseDto> {
+    this.logger.log(
+      `Pipeline started: query="${input.query}" topK=${input.topK}`,
+    );
+
     const searchResults = await this.searchProvider.search({
+      ...input,
       query: input.query,
       topK: input.topK,
-      region: input.region,
     });
 
     if (searchResults.length === 0) {
+      this.logger.warn(
+        `Pipeline: search returned no results for query="${input.query}"`,
+      );
+
       return new SearchAndExtractResponseDto([], {
         requested: 0,
         extracted: 0,
@@ -59,6 +69,10 @@ export class SearchAndExtractPipeline {
         ];
       })
       .sort((left, right) => left.position - right.position);
+
+    this.logger.log(
+      `Pipeline completed: query="${input.query}" searched=${urls.length} extracted=${results.length}`,
+    );
 
     return new SearchAndExtractResponseDto(results, {
       requested: urls.length,

@@ -16,6 +16,6 @@ export class GoogleSearchAndExtractController {
   async handle(
     @Body() body: GoogleSearchAndExtractQueryDto,
   ): Promise<SearchAndExtractResponseDto> {
-    return this.searchAndExtractPipeline.run(body);
+    return this.searchAndExtractPipeline.run({ ...body });
   }
 }

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { envValidationSchema } from './config/env.validation';
 import { ExtractModule } from './extract/extract.module';
 import { GoogleSearchAndExtractModule } from './google-search-and-extract/google-search-and-extract.module';
 import { GoogleSearchModule } from './google-search/google-search.module';
@@ -14,6 +15,7 @@ import { YandexSearchModule } from './yandex-search/yandex-search.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validationSchema: envValidationSchema,
     }),
     ExtractModule,
     GoogleSearchAndExtractModule,

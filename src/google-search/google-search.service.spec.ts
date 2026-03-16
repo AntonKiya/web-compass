@@ -1,4 +1,4 @@
-import { InternalServerErrorException, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
@@ -12,7 +12,9 @@ describe('GoogleSearchService', () => {
   let googleSearchService: GoogleSearchService;
   let httpClient: jest.Mocked<SerpApiHttpClient>;
   let getJsonMock: jest.MockedFunction<SerpApiHttpClient['getJson']>;
-  let configService: { get: jest.Mock; getOrThrow: jest.Mock };
+  let configService: { getOrThrow: jest.Mock };
+  let loggerLogSpy: jest.SpiedFunction<Logger['log']>;
+  let loggerErrorSpy: jest.SpiedFunction<Logger['error']>;
 
   beforeEach(async () => {
     getJsonMock = jest.fn();
@@ -20,14 +22,11 @@ describe('GoogleSearchService', () => {
       getJson: getJsonMock,
     };
     configService = {
-      get: jest.fn((key: string) => {
+      getOrThrow: jest.fn((key: string) => {
         if (key === 'SERPAPI_KEY') {
           return 'test-serpapi-key';
         }
 
-        return undefined;
-      }),
-      getOrThrow: jest.fn((key: string) => {
         if (key === 'SERPAPI_BASE_URL') {
           return 'https://serpapi.com/search';
         }
@@ -36,7 +35,12 @@ describe('GoogleSearchService', () => {
       }),
     };
 
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    loggerLogSpy = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    loggerErrorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -107,6 +111,12 @@ describe('GoogleSearchService', () => {
     expect(requestUrl.searchParams.get('output')).toBe('json');
     expect(requestUrl.searchParams.get('api_key')).toBe('test-serpapi-key');
     expect(requestUrl.searchParams.get('nfpr')).toBe('1');
+    expect(loggerLogSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['Searching Google: query="nestjs" topK=2'],
+        ['Google search completed: query="nestjs" returned 2 results'],
+      ]),
+    );
   });
 
   it('throws a readable provider exception when SerpAPI returns an error payload', async () => {
@@ -120,17 +130,30 @@ describe('GoogleSearchService', () => {
         topK: 3,
       }),
     ).rejects.toBeInstanceOf(SearchProviderException);
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      'Google SerpAPI error: query="nestjs" error="Invalid API key"',
+    );
   });
 
-  it('throws an internal server error when SERPAPI_KEY is missing', async () => {
-    configService.get.mockReturnValue(undefined);
+  it('propagates the config error when SERPAPI_KEY is missing', async () => {
+    configService.getOrThrow.mockImplementation((key: string) => {
+      if (key === 'SERPAPI_KEY') {
+        throw new Error('SERPAPI_KEY is not configured');
+      }
+
+      if (key === 'SERPAPI_BASE_URL') {
+        return 'https://serpapi.com/search';
+      }
+
+      throw new Error(`Unexpected config key: ${key}`);
+    });
 
     await expect(
       googleSearchService.search({
         query: 'nestjs',
         topK: 3,
       }),
-    ).rejects.toBeInstanceOf(InternalServerErrorException);
+    ).rejects.toThrow('SERPAPI_KEY is not configured');
   });
 
   it('returns no more than topK results even if SerpAPI responds with more items', async () => {
@@ -176,5 +199,19 @@ describe('GoogleSearchService', () => {
         position: 2,
       },
     ]);
+  });
+
+  it('logs a readable provider error when the SerpAPI request fails', async () => {
+    getJsonMock.mockRejectedValue(new Error('SerpAPI 500'));
+
+    await expect(
+      googleSearchService.search({
+        query: 'nestjs',
+        topK: 3,
+      }),
+    ).rejects.toBeInstanceOf(SearchProviderException);
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      'Google SerpAPI request failed: query="nestjs" cause="SerpAPI 500"',
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { ExtractService } from '../../extract/extract.service';
@@ -12,6 +13,8 @@ describe('SearchAndExtractPipeline', () => {
   let searchAndExtractPipeline: SearchAndExtractPipeline;
   let searchProvider: jest.Mocked<SearchProvider>;
   let extractService: { extract: jest.Mock };
+  let loggerLogSpy: jest.SpiedFunction<Logger['log']>;
+  let loggerWarnSpy: jest.SpiedFunction<Logger['warn']>;
 
   beforeEach(async () => {
     searchProvider = {
@@ -20,6 +23,12 @@ describe('SearchAndExtractPipeline', () => {
     extractService = {
       extract: jest.fn(),
     };
+    loggerLogSpy = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    loggerWarnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -112,6 +121,12 @@ describe('SearchAndExtractPipeline', () => {
         extracted: 2,
       },
     });
+    expect(loggerLogSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['Pipeline started: query="nestjs" topK=2'],
+        ['Pipeline completed: query="nestjs" searched=2 extracted=2'],
+      ]),
+    );
   });
 
   it('returns only results that have extracted content when extract is partial', async () => {
@@ -181,6 +196,9 @@ describe('SearchAndExtractPipeline', () => {
       },
     });
     expect(extractService.extract).not.toHaveBeenCalled();
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      'Pipeline: search returned no results for query="nestjs"',
+    );
   });
 
   it('calls ExtractService with the URLs from the search results', async () => {

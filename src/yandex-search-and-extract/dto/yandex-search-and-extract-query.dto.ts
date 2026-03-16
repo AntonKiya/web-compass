@@ -1,23 +1,8 @@
-import {
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 
-export class YandexSearchAndExtractQueryDto {
-  @IsString()
-  @IsNotEmpty()
-  query!: string;
+import { SearchQueryBaseDto } from '../../common/dto/search-query-base.dto';
 
-  @IsInt()
-  @Min(1)
-  @Max(10)
-  topK!: number;
-
+export class YandexSearchAndExtractQueryDto extends SearchQueryBaseDto {
   @IsEnum(['russia', 'cis'])
   @IsOptional()
   region?: 'russia' | 'cis';

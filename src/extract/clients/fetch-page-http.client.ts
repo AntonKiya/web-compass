@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { PageFetchException } from '../exceptions/page-fetch.exception';
 import { PageHttpClient } from '../interfaces/page-http-client.interface';
 
 @Injectable()
 export class FetchPageHttpClient implements PageHttpClient {
+  private readonly logger = new Logger(FetchPageHttpClient.name);
   private readonly requestTimeoutMs: number;
   private readonly userAgent: string;
 
@@ -26,7 +26,12 @@ export class FetchPageHttpClient implements PageHttpClient {
     });
 
     if (!response.ok) {
-      throw new PageFetchException();
+      this.logger.warn(
+        `Page fetch failed: HTTP ${response.status} url="${url}"`,
+      );
+      throw new Error(
+        `Failed to fetch "${url}": HTTP ${response.status} ${response.statusText || 'unknown status'}`,
+      );
     }
 
     return response.text();

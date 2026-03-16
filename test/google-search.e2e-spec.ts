@@ -1,47 +1,32 @@
 import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from '../src/app.module';
 import { SERPAPI_HTTP_CLIENT } from '../src/common/constants/serpapi.constants';
 import { SerpApiHttpClient } from '../src/common/http/serpapi-http-client.interface';
-import { setupApp } from '../src/app.setup';
+import { createTestApp } from './helpers/create-test-app.helper';
 
 describe('GoogleSearchController (e2e)', () => {
   let app: INestApplication;
   let serpApiHttpClient: jest.Mocked<SerpApiHttpClient>;
-  const originalSerpApiKey = process.env.SERPAPI_KEY;
 
-  beforeEach(async () => {
-    process.env.SERPAPI_KEY = 'test-serpapi-key';
+  beforeAll(async () => {
     serpApiHttpClient = {
       getJson: jest.fn(),
     };
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(SERPAPI_HTTP_CLIENT)
-      .useValue(serpApiHttpClient)
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    setupApp(app);
-    await app.init();
+    app = await createTestApp([
+      {
+        token: SERPAPI_HTTP_CLIENT,
+        value: serpApiHttpClient,
+      },
+    ]);
   });
 
-  afterEach(async () => {
-    await app.close();
+  afterEach(() => {
     jest.resetAllMocks();
   });
 
-  afterAll(() => {
-    if (typeof originalSerpApiKey === 'string') {
-      process.env.SERPAPI_KEY = originalSerpApiKey;
-      return;
-    }
-
-    delete process.env.SERPAPI_KEY;
+  afterAll(async () => {
+    await app.close();
   });
 
   it('POST /search-google returns 200 and normalized results for valid payload', async () => {

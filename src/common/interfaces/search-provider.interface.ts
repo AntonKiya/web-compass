@@ -4,7 +4,7 @@ export interface SearchProvider {
   search(input: {
     query: string;
     topK: number;
-    region?: 'russia' | 'cis';
+    [key: string]: unknown;
   }): Promise<SearchResultDto[]>;
 }
 

@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { SERPAPI_HTTP_CLIENT } from '../common/constants/serpapi.constants';
@@ -41,12 +36,11 @@ export class GoogleSearchService implements SearchProvider {
   }
 
   async search(input: GoogleSearchQueryDto): Promise<SearchResultDto[]> {
-    const apiKey = this.configService.get<string>('SERPAPI_KEY');
+    this.logger.log(
+      `Searching Google: query="${input.query}" topK=${input.topK}`,
+    );
 
-    if (!apiKey) {
-      this.logger.error('SERPAPI_KEY is not configured');
-      throw new InternalServerErrorException('SERPAPI_KEY is not configured');
-    }
+    const apiKey = this.configService.getOrThrow<string>('SERPAPI_KEY');
 
     const requestUrl = this.buildRequestUrl(input, apiKey);
 
@@ -57,12 +51,21 @@ export class GoogleSearchService implements SearchProvider {
 
       if (payload.error) {
         this.logger.error(
-          `SerpAPI returned an error for Google query "${input.query}": ${payload.error}`,
+          `Google SerpAPI error: query="${input.query}" error="${payload.error}"`,
         );
         throw new SearchProviderException();
       }
 
-      return this.mapResults(payload.organic_results ?? [], input.topK);
+      const results = this.mapResults(
+        payload.organic_results ?? [],
+        input.topK,
+      );
+
+      this.logger.log(
+        `Google search completed: query="${input.query}" returned ${results.length} results`,
+      );
+
+      return results;
     } catch (error: unknown) {
       if (error instanceof SearchProviderException) {
         throw error;
@@ -71,7 +74,7 @@ export class GoogleSearchService implements SearchProvider {
       const message =
         error instanceof Error ? error.message : 'Unknown SerpAPI error';
       this.logger.error(
-        `SerpAPI request failed for Google query "${input.query}": ${message}`,
+        `Google SerpAPI request failed: query="${input.query}" cause="${message}"`,
       );
 
       throw new SearchProviderException();

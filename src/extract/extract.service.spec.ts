@@ -46,6 +46,7 @@ describe('ExtractService', () => {
   let extractService: ExtractService;
   let pageHttpClient: jest.Mocked<PageHttpClient>;
   let fetchHtmlMock: jest.MockedFunction<PageHttpClient['fetchHtml']>;
+  let loggerLogSpy: jest.SpiedFunction<Logger['log']>;
   let loggerErrorSpy: jest.SpiedFunction<Logger['error']>;
 
   beforeEach(async () => {
@@ -56,6 +57,9 @@ describe('ExtractService', () => {
 
     closeMock.mockClear();
     parseMock.mockReset();
+    loggerLogSpy = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
     loggerErrorSpy = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
@@ -102,6 +106,12 @@ describe('ExtractService', () => {
     expect(response.results[0].content).toContain('First paragraph.');
     expect(response.results[0].content).toContain('Second paragraph.');
     expect(closeMock).toHaveBeenCalledTimes(1);
+    expect(loggerLogSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['Extracting content: urls=1'],
+        ['Extraction completed: requested=1 extracted=1'],
+      ]),
+    );
   });
 
   it('keeps only successful results when one of the URLs fails', async () => {
@@ -130,6 +140,10 @@ describe('ExtractService', () => {
     });
     expect(loggerErrorSpy).toHaveBeenCalledWith(
       'Failed to extract "https://example.com/fail": Request timed out',
+      expect.any(String),
+    );
+    expect(loggerLogSpy).toHaveBeenCalledWith(
+      'Extraction completed: requested=2 extracted=1',
     );
   });
 
@@ -148,6 +162,9 @@ describe('ExtractService', () => {
       },
     });
     expect(loggerErrorSpy).toHaveBeenCalledTimes(2);
+    expect(loggerLogSpy).toHaveBeenCalledWith(
+      'Extraction completed: requested=2 extracted=0',
+    );
   });
 });
 

@@ -11,6 +11,8 @@ describe('YandexSearchService', () => {
   let yandexSearchService: YandexSearchService;
   let httpClient: jest.Mocked<SerpApiHttpClient>;
   let getJsonMock: jest.MockedFunction<SerpApiHttpClient['getJson']>;
+  let loggerLogSpy: jest.SpiedFunction<Logger['log']>;
+  let loggerErrorSpy: jest.SpiedFunction<Logger['error']>;
 
   beforeEach(async () => {
     getJsonMock = jest.fn();
@@ -18,7 +20,12 @@ describe('YandexSearchService', () => {
       getJson: getJsonMock,
     };
 
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    loggerLogSpy = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    loggerErrorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -26,14 +33,11 @@ describe('YandexSearchService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            getOrThrow: jest.fn((key: string) => {
               if (key === 'SERPAPI_KEY') {
                 return 'test-serpapi-key';
               }
 
-              return undefined;
-            }),
-            getOrThrow: jest.fn((key: string) => {
               if (key === 'SERPAPI_BASE_URL') {
                 return 'https://serpapi.com/search';
               }
@@ -107,6 +111,12 @@ describe('YandexSearchService', () => {
     expect(requestUrl.searchParams.get('lr')).toBe('166');
     expect(requestUrl.searchParams.get('api_key')).toBe('test-serpapi-key');
     expect(requestUrl.searchParams.get('fix_typo')).toBe('false');
+    expect(loggerLogSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['Searching Yandex: query="nestjs" topK=2 region=cis'],
+        ['Yandex search completed: query="nestjs" returned 2 results'],
+      ]),
+    );
   });
 
   it('returns no more than topK results even if SerpAPI responds with more items', async () => {
@@ -165,6 +175,9 @@ describe('YandexSearchService', () => {
         topK: 3,
       }),
     ).rejects.toBeInstanceOf(SearchProviderException);
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      'Yandex SerpAPI error: query="nestjs" error="Invalid API key"',
+    );
   });
 
   it('throws a readable provider exception when SerpAPI request fails', async () => {
@@ -176,5 +189,8 @@ describe('YandexSearchService', () => {
         topK: 3,
       }),
     ).rejects.toBeInstanceOf(SearchProviderException);
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      'Yandex SerpAPI request failed: query="nestjs" cause="SerpAPI 500"',
+    );
   });
 });

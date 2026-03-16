@@ -1,42 +1,40 @@
 import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from '../src/app.module';
-import { setupApp } from '../src/app.setup';
 import { ExtractService } from '../src/extract/extract.service';
 import { GoogleSearchService } from '../src/google-search/google-search.service';
+import { createTestApp } from './helpers/create-test-app.helper';
 
 describe('GoogleSearchAndExtractController (e2e)', () => {
   let app: INestApplication;
   let googleSearchService: { search: jest.Mock };
   let extractService: { extract: jest.Mock };
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     googleSearchService = {
       search: jest.fn(),
     };
     extractService = {
       extract: jest.fn(),
     };
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(GoogleSearchService)
-      .useValue(googleSearchService)
-      .overrideProvider(ExtractService)
-      .useValue(extractService)
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    setupApp(app);
-    await app.init();
+    app = await createTestApp([
+      {
+        token: GoogleSearchService,
+        value: googleSearchService,
+      },
+      {
+        token: ExtractService,
+        value: extractService,
+      },
+    ]);
   });
 
-  afterEach(async () => {
-    await app.close();
+  afterEach(() => {
     jest.resetAllMocks();
+  });
+
+  afterAll(async () => {
+    await app.close();
   });
 
   it('POST /search-and-extract-google returns 200 and merged results for valid payload', async () => {
