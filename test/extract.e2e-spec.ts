@@ -1,11 +1,9 @@
 import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from '../src/app.module';
-import { setupApp } from '../src/app.setup';
 import { PAGE_HTTP_CLIENT } from '../src/extract/extract.constants';
 import { PageHttpClient } from '../src/extract/interfaces/page-http-client.interface';
+import { createTestApp } from './helpers/create-test-app.helper';
 
 const ARTICLE_HTML = `<!doctype html>
 <html lang="en">
@@ -76,26 +74,24 @@ describe('ExtractController (e2e)', () => {
   let app: INestApplication;
   let pageHttpClient: jest.Mocked<PageHttpClient>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     pageHttpClient = {
       fetchHtml: jest.fn(),
     };
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(PAGE_HTTP_CLIENT)
-      .useValue(pageHttpClient)
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    setupApp(app);
-    await app.init();
+    app = await createTestApp([
+      {
+        token: PAGE_HTTP_CLIENT,
+        value: pageHttpClient,
+      },
+    ]);
   });
 
-  afterEach(async () => {
-    await app.close();
+  afterEach(() => {
     jest.resetAllMocks();
+  });
+
+  afterAll(async () => {
+    await app.close();
   });
 
   it('POST /extract returns 200 and extracted content for valid URLs', async () => {

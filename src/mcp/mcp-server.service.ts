@@ -9,8 +9,10 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { Request, Response } from 'express';
 
 import { ExtractMcpTool } from './extract-mcp.tool';
-import { SearchAndExtractMcpTool } from './search-and-extract-mcp.tool';
-import { SearchMcpTool } from './search-mcp-tool';
+import { GoogleSearchAndExtractMcpTool } from './google-search-and-extract-mcp.tool';
+import { GoogleSearchMcpTool } from './google-search-mcp.tool';
+import { YandexSearchAndExtractMcpTool } from './yandex-search-and-extract-mcp.tool';
+import { YandexSearchMcpTool } from './yandex-search-mcp.tool';
 
 @Injectable()
 export class McpServerService implements OnModuleInit, OnModuleDestroy {
@@ -24,20 +26,28 @@ export class McpServerService implements OnModuleInit, OnModuleDestroy {
   });
 
   constructor(
-    private readonly searchMcpTool: SearchMcpTool,
+    private readonly yandexSearchMcpTool: YandexSearchMcpTool,
     private readonly extractMcpTool: ExtractMcpTool,
-    private readonly searchAndExtractMcpTool: SearchAndExtractMcpTool,
+    private readonly googleSearchAndExtractMcpTool: GoogleSearchAndExtractMcpTool,
+    private readonly googleSearchMcpTool: GoogleSearchMcpTool,
+    private readonly yandexSearchAndExtractMcpTool: YandexSearchAndExtractMcpTool,
   ) {}
 
   async onModuleInit(): Promise<void> {
-    this.searchMcpTool.register(this.server);
+    this.logger.log(
+      'Registering MCP tools: search_yandex, search_google, extract, search_and_extract_yandex, search_and_extract_google',
+    );
+    this.yandexSearchMcpTool.register(this.server);
     this.extractMcpTool.register(this.server);
-    this.searchAndExtractMcpTool.register(this.server);
+    this.googleSearchAndExtractMcpTool.register(this.server);
+    this.googleSearchMcpTool.register(this.server);
+    this.yandexSearchAndExtractMcpTool.register(this.server);
     await this.server.connect(this.transport);
     this.logger.log('MCP server initialized');
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.logger.log('MCP server shutting down');
     await this.server.close();
   }
 

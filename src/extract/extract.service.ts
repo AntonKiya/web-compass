@@ -18,6 +18,8 @@ export class ExtractService {
   ) {}
 
   async extract(input: ExtractQueryDto): Promise<ExtractResponseDto> {
+    this.logger.log(`Extracting content: urls=${input.urls.length}`);
+
     const settledResults = await Promise.allSettled(
       input.urls.map((url) => this.extractFromUrl(url)),
     );
@@ -33,8 +35,13 @@ export class ExtractService {
       const url = input.urls[index];
       this.logger.error(
         `Failed to extract "${url}": ${this.getErrorMessage(result.reason)}`,
+        result.reason instanceof Error ? result.reason.stack : undefined,
       );
     });
+
+    this.logger.log(
+      `Extraction completed: requested=${input.urls.length} extracted=${results.length}`,
+    );
 
     return new ExtractResponseDto(results, {
       requested: input.urls.length,
