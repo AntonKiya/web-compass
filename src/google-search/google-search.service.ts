@@ -56,6 +56,10 @@ export class GoogleSearchService implements SearchProvider {
         throw new SearchProviderException();
       }
 
+      this.logger.debug(
+        `Google raw organic_results count: ${payload.organic_results?.length ?? 0}`,
+      );
+
       const results = this.mapResults(
         payload.organic_results ?? [],
         input.topK,
@@ -89,7 +93,8 @@ export class GoogleSearchService implements SearchProvider {
     url.searchParams.set('num', input.topK.toString());
     url.searchParams.set('output', 'json');
     url.searchParams.set('api_key', apiKey);
-    url.searchParams.set('nfpr', '1');
+    url.searchParams.set('gl', 'us');
+    url.searchParams.set('hl', 'en');
 
     return url;
   }

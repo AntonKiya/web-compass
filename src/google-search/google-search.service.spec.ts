@@ -14,6 +14,7 @@ describe('GoogleSearchService', () => {
   let getJsonMock: jest.MockedFunction<SerpApiHttpClient['getJson']>;
   let configService: { getOrThrow: jest.Mock };
   let loggerLogSpy: jest.SpiedFunction<Logger['log']>;
+  let loggerDebugSpy: jest.SpiedFunction<Logger['debug']>;
   let loggerErrorSpy: jest.SpiedFunction<Logger['error']>;
 
   beforeEach(async () => {
@@ -37,6 +38,9 @@ describe('GoogleSearchService', () => {
 
     loggerLogSpy = jest
       .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    loggerDebugSpy = jest
+      .spyOn(Logger.prototype, 'debug')
       .mockImplementation(() => undefined);
     loggerErrorSpy = jest
       .spyOn(Logger.prototype, 'error')
@@ -110,12 +114,16 @@ describe('GoogleSearchService', () => {
     expect(requestUrl.searchParams.get('num')).toBe('2');
     expect(requestUrl.searchParams.get('output')).toBe('json');
     expect(requestUrl.searchParams.get('api_key')).toBe('test-serpapi-key');
-    expect(requestUrl.searchParams.get('nfpr')).toBe('1');
+    expect(requestUrl.searchParams.get('gl')).toBe('us');
+    expect(requestUrl.searchParams.get('hl')).toBe('en');
     expect(loggerLogSpy.mock.calls).toEqual(
       expect.arrayContaining([
         ['Searching Google: query="nestjs" topK=2'],
         ['Google search completed: query="nestjs" returned 2 results'],
       ]),
+    );
+    expect(loggerDebugSpy).toHaveBeenCalledWith(
+      'Google raw organic_results count: 2',
     );
   });
 
